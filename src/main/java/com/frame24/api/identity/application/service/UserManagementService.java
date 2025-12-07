@@ -1,7 +1,5 @@
 package com.frame24.api.identity.application.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frame24.api.common.exception.NotFoundException;
 import com.frame24.api.common.exception.ValidationException;
 import com.frame24.api.common.security.UserPrincipal;
@@ -19,6 +17,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -43,7 +43,7 @@ public class UserManagementService {
     private final UserSessionRepository userSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
 
     /**
      * Cria um novo usuário no sistema.
@@ -553,8 +553,8 @@ public class UserManagementService {
 
     private String convertComplexListToJson(List<Long> complexIds) {
         try {
-            return objectMapper.writeValueAsString(complexIds);
-        } catch (JsonProcessingException e) {
+            return jsonMapper.writeValueAsString(complexIds);
+        } catch (JacksonException e) {
             log.error("Erro ao converter lista de complexos para JSON", e);
             throw new ValidationException("Erro ao processar lista de complexos");
         }
@@ -566,9 +566,9 @@ public class UserManagementService {
         }
 
         try {
-            return objectMapper.readValue(json,
-                    objectMapper.getTypeFactory().constructCollectionType(List.class, Long.class));
-        } catch (JsonProcessingException e) {
+            return jsonMapper.readValue(json,
+                    jsonMapper.getTypeFactory().constructCollectionType(List.class, Long.class));
+        } catch (JacksonException e) {
             log.error("Erro ao parsear JSON de complexos: {}", json, e);
             return List.of();
         }

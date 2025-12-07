@@ -1,6 +1,5 @@
 package com.frame24.api.common.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,7 +18,6 @@ import java.time.Duration;
 public class UserSessionCache {
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private final ObjectMapper objectMapper;
 
     private static final String KEY_PREFIX = "user:session:";
     private static final Duration DEFAULT_TTL = Duration.ofHours(1); // 1h (mesmo do access token)
