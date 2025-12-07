@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -48,6 +49,8 @@ class CompanyRegistrationServiceTest {
 
         @Mock
         private DefaultPermissionsService defaultPermissionsService;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
         private CompanyRegistrationService companyRegistrationService;
 
@@ -62,7 +65,8 @@ class CompanyRegistrationServiceTest {
                                 companyUserRepository,
                                 passwordEncoder,
                                 defaultRolesService,
-                                defaultPermissionsService);
+                        defaultPermissionsService,
+                        eventPublisher);
         }
 
         @Test
