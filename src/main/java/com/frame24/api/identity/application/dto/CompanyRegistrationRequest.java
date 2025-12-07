@@ -1,5 +1,6 @@
 package com.frame24.api.identity.application.dto;
 
+import com.frame24.api.common.validation.ValidCnpj;
 import com.frame24.api.identity.domain.enums.CompanyPlanType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
@@ -16,9 +17,9 @@ public record CompanyRegistrationRequest(
 
         @Schema(description = "Nome fantasia", example = "CineEstrela") @Size(max = 200, message = "Nome fantasia deve ter no máximo 200 caracteres") String tradeName,
 
-        @Schema(description = "CNPJ da empresa", example = "98.765.432/0001-10") @NotBlank(message = "CNPJ é obrigatório") @Pattern(regexp = "^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$|^\\d{14}$", message = "CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX ou apenas números") String cnpj,
+        @Schema(description = "CNPJ da empresa (aceita com ou sem formatação)", example = "98.765.432/0001-10") @NotBlank(message = "CNPJ é obrigatório") @ValidCnpj String cnpj,
 
-        @Schema(description = "CEP da empresa", example = "01310-100") @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "CEP deve estar no formato XXXXX-XXX") String companyZipCode,
+        @Schema(description = "CEP da empresa (aceita com ou sem traço)", example = "01310-100") @Pattern(regexp = "^\\d{5}-?\\d{3}$", message = "CEP deve estar no formato XXXXX-XXX") String companyZipCode,
 
         @Schema(description = "Logradouro", example = "Av. Paulista") @Size(max = 300, message = "Endereço deve ter no máximo 300 caracteres") String companyStreetAddress,
 
@@ -30,9 +31,9 @@ public record CompanyRegistrationRequest(
 
         @Schema(description = "Cidade", example = "São Paulo") @Size(max = 100, message = "Cidade deve ter no máximo 100 caracteres") String companyCity,
 
-        @Schema(description = "Estado (UF)", example = "SP") @Pattern(regexp = "^[A-Z]{2}$", message = "Estado deve ter 2 letras maiúsculas") String companyState,
+        @Schema(description = "Estado - UF em maiúsculas", example = "SP") @Pattern(regexp = "^[A-Z]{2}$", message = "Estado deve ter 2 letras maiúsculas") String companyState,
 
-        @Schema(description = "Telefone da empresa", example = "(11) 3333-4444") @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres") String companyPhone,
+        @Schema(description = "Telefone da empresa (formato livre)", example = "(11) 3333-4444") @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres") String companyPhone,
 
         @Schema(description = "Email corporativo", example = "contato@cineestrela.com") @Email(message = "Email da empresa inválido") @Size(max = 100, message = "Email deve ter no máximo 100 caracteres") String companyEmail,
 
@@ -44,7 +45,7 @@ public record CompanyRegistrationRequest(
 
         @Schema(description = "Senha do administrador", example = "SenhaSegura123") @NotBlank(message = "Senha é obrigatória") @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres") @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$", message = "Senha deve conter pelo menos uma letra maiúscula, uma minúscula e um número") String password,
 
-        @Schema(description = "Celular do administrador", example = "(11) 98765-4321") @Size(max = 20, message = "Celular deve ter no máximo 20 caracteres") String mobile,
+        @Schema(description = "Celular do administrador (formato livre)", example = "(11) 98765-4321") @Size(max = 20, message = "Celular deve ter no máximo 20 caracteres") String mobile,
 
         // ===== Plano =====
 

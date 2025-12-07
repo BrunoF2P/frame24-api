@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -96,6 +98,46 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthentication(AuthenticationException ex,
+                                                                 HttpServletRequest request) {
+        String traceId = generateTraceId();
+        log.warn("[{}] Erro de autenticação: {}", traceId, ex.getMessage());
+
+        var response = ApiErrorResponse.builder()
+                .error(ApiErrorResponse.ErrorDetails.builder()
+                        .code("UNAUTHORIZED")
+                        .title("Não Autenticado")
+                        .detail("Você precisa estar autenticado para acessar este recurso")
+                        .suggestion("Faça login e tente novamente")
+                        .build())
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex,
+                                                               HttpServletRequest request) {
+        String traceId = generateTraceId();
+        log.warn("[{}] Erro de autorização: {}", traceId, ex.getMessage());
+
+        var response = ApiErrorResponse.builder()
+                .error(ApiErrorResponse.ErrorDetails.builder()
+                        .code("FORBIDDEN")
+                        .title("Acesso Negado")
+                        .detail("Você não tem permissão para acessar este recurso")
+                        .suggestion("Verifique suas permissões ou entre em contato com o administrador")
+                        .build())
+                .timestamp(Instant.now())
+                .traceId(traceId)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

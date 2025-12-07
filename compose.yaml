@@ -39,6 +39,19 @@ services:
       timeout: 3s
       retries: 3
 
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: frame24-redis-insight
+    ports:
+      - "5540:5540"
+    volumes:
+      - redis-insight-data:/data
+    networks:
+      - frame24-network
+    depends_on:
+      - redis
+
+
   maildev:
     image: maildev/maildev:2.2.1
     container_name: frame24-maildev
@@ -143,6 +156,7 @@ volumes:
   rabbitmq_data:
   redis-data:
   minio_data:
+  redis-insight-data:
 
 networks:
   frame24-network:

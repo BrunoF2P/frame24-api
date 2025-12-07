@@ -1,5 +1,6 @@
 package com.frame24.api.identity.api;
 
+import com.frame24.api.common.ratelimit.RateLimited;
 import com.frame24.api.common.response.ApiResponse;
 import com.frame24.api.identity.application.dto.*;
 import com.frame24.api.identity.application.service.AuthenticationService;
@@ -24,6 +25,7 @@ public class AuthenticationController {
 
     private final AuthenticationService authenticationService;
 
+    @RateLimited(requests = 5, windowMinutes = 1)
     @PostMapping(value = "/login", version = "v1.0+")
     @Operation(summary = "Login de usuário", description = "Autentica um usuário e retorna tokens JWT")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
@@ -46,6 +48,7 @@ public class AuthenticationController {
         return ResponseEntity.ok(ApiResponse.success(response, "Token renovado com sucesso"));
     }
 
+    @RateLimited(requests = 3, windowMinutes = 5)
     @PostMapping(value = "/forgot-password", version = "v1.0+")
     @Operation(summary = "Solicitar reset de senha", description = "Envia email com link para reset de senha")
     public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
@@ -53,6 +56,7 @@ public class AuthenticationController {
         return ResponseEntity.ok(ApiResponse.success(null, "Email de reset enviado"));
     }
 
+    @RateLimited(requests = 3, windowMinutes = 5)
     @PostMapping(value = "/reset-password", version = "v1.0+")
     @Operation(summary = "Redefinir senha", description = "Redefine a senha usando token recebido por email")
     public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {

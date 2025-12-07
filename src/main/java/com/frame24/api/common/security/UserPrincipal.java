@@ -76,6 +76,9 @@ public class UserPrincipal implements UserDetails {
     private final String roleName;
 
     @Builder.Default
+    private final List<Long> allowedComplexes = List.of();
+
+    @Builder.Default
     private final List<GrantedAuthority> authorities = List.of();
 
     @Builder.Default

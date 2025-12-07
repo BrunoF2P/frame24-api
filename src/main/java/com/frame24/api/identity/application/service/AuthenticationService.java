@@ -12,8 +12,10 @@ import com.frame24.api.identity.application.dto.LoginResponse;
 import com.frame24.api.identity.application.dto.ResetPasswordRequest;
 import com.frame24.api.identity.domain.CompanyUser;
 import com.frame24.api.identity.domain.Identity;
+import com.frame24.api.identity.domain.PasswordHistory;
 import com.frame24.api.identity.infrastructure.repository.CompanyUserRepository;
 import com.frame24.api.identity.infrastructure.repository.IdentityRepository;
+import com.frame24.api.identity.infrastructure.repository.PasswordHistoryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,6 +39,7 @@ public class AuthenticationService {
 
     private final IdentityRepository identityRepository;
     private final CompanyUserRepository companyUserRepository;
+    private final PasswordHistoryRepository passwordHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final TokenBlacklist tokenBlacklist;
@@ -45,6 +48,15 @@ public class AuthenticationService {
 
     @Value("${jwt.access-token-expiration}")
     private Long accessTokenExpiration;
+
+    @Value("${security.max-failed-login-attempts}")
+    private int maxFailedLoginAttempts;
+
+    @Value("${security.account-lock-duration-minutes}")
+    private int accountLockDurationMinutes;
+
+    @Value("${security.password-history-size}")
+    private int passwordHistorySize;
 
     /**
      * Realiza login do usuário e retorna tokens JWT.
@@ -60,9 +72,30 @@ public class AuthenticationService {
             throw new ValidationException("email", "Conta inativa");
         }
 
+        // Verifica se a conta está bloqueada temporariamente
+        if (identity.getBlockedUntil() != null && identity.getBlockedUntil().isAfter(Instant.now())) {
+            long minutesRemaining = java.time.Duration.between(Instant.now(), identity.getBlockedUntil()).toMinutes();
+            throw new ValidationException("email",
+                    String.format("Conta temporariamente bloqueada. Tente novamente em %d minutos", minutesRemaining));
+        }
+
+        if (!Boolean.TRUE.equals(identity.getEmailVerified())) {
+            throw new ValidationException("email", "Email não verificado. Verifique seu email para ativar a conta");
+        }
+
         if (!passwordEncoder.matches(request.password(), identity.getPasswordHash())) {
-            log.warn("Senha incorreta para email: {}", request.email());
+            log.warn("Senha incorreta para email: {}***",
+                    request.email().substring(0, Math.min(2, request.email().length())));
+            handleFailedLogin(identity);
             throw new ValidationException("password", "Credenciais inválidas");
+        }
+
+        // Reset failed login attempts on successful login
+        if (identity.getFailedLoginAttempts() != null && identity.getFailedLoginAttempts() > 0) {
+            identity.setFailedLoginAttempts(0);
+            identity.setLastFailedLogin(null);
+            identity.setBlockedUntil(null);
+            identityRepository.save(identity);
         }
 
         CompanyUser companyUser = companyUserRepository.findByIdentityId(identity.getId())
@@ -211,6 +244,12 @@ public class AuthenticationService {
             throw new ValidationException("token", "Token expirado");
         }
 
+        // Valida que nova senha não está no histórico
+        validatePasswordHistory(identity, request.newPassword());
+
+        // Salva senha antiga no histórico
+        savePasswordHistory(identity);
+
         // Atualiza senha
         identity.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         identity.setResetToken(null);
@@ -249,5 +288,54 @@ public class AuthenticationService {
                 .roleName(companyUser.getRole().getName())
                 .authorities(new java.util.ArrayList<>(authorities))
                 .build();
+    }
+
+    /**
+     * Trata tentativa de login falhada, incrementando contador e bloqueando se
+     * necessário.
+     */
+    private void handleFailedLogin(Identity identity) {
+        int attempts = identity.getFailedLoginAttempts() != null ? identity.getFailedLoginAttempts() : 0;
+        attempts++;
+
+        identity.setFailedLoginAttempts(attempts);
+        identity.setLastFailedLogin(Instant.now());
+
+        // Bloqueia conta após N tentativas
+        if (attempts >= maxFailedLoginAttempts) {
+            identity.setBlockedUntil(Instant.now().plus(java.time.Duration.ofMinutes(accountLockDurationMinutes)));
+            identity.setBlockReason("Múltiplas tentativas de login falhadas");
+            log.warn("Conta bloqueada por {} minutos: identityId={}", accountLockDurationMinutes, identity.getId());
+        }
+
+        identityRepository.save(identity);
+    }
+
+    /**
+     * Valida que a nova senha não está no histórico recente.
+     */
+    private void validatePasswordHistory(Identity identity, String newPassword) {
+        java.util.List<PasswordHistory> history = passwordHistoryRepository
+                .findTop3ByIdentity_IdOrderByCreatedAtDesc(identity.getId());
+
+        for (PasswordHistory oldPassword : history) {
+            if (passwordEncoder.matches(newPassword, oldPassword.getPasswordHash())) {
+                throw new ValidationException("password",
+                        "Você não pode reutilizar uma das suas últimas " + passwordHistorySize + " senhas");
+            }
+        }
+    }
+
+    /**
+     * Salva a senha atual no histórico antes de alterá-la.
+     */
+    private void savePasswordHistory(Identity identity) {
+        PasswordHistory history = new PasswordHistory();
+        history.setIdentity(identity);
+        history.setPasswordHash(identity.getPasswordHash());
+        history.setCreatedAt(Instant.now());
+        passwordHistoryRepository.save(history);
+
+        log.debug("Senha salva no histórico: identityId={}", identity.getId());
     }
 }

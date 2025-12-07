@@ -103,6 +103,15 @@ public class RLSContextInterceptor implements HandlerInterceptor {
                 if ("EMPLOYEE".equals(user.getUserType()) && user.getCompanyId() != null) {
                     setSessionVariable("app.current_company_id", user.getCompanyId());
                     log.debug("RLS: Company ID configurado como {}", user.getCompanyId());
+
+                    // Configura allowed_complexes se disponível
+                    if (user.getAllowedComplexes() != null && !user.getAllowedComplexes().isEmpty()) {
+                        String complexesStr = user.getAllowedComplexes().stream()
+                                .map(String::valueOf)
+                                .collect(java.util.stream.Collectors.joining(","));
+                        setSessionVariable("app.allowed_complexes", complexesStr);
+                        log.debug("RLS: Allowed complexes configurado como {}", complexesStr);
+                    }
                 }
 
                 // Para clientes: configura customer_id e company_id

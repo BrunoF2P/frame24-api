@@ -23,6 +23,7 @@ public enum CompanyPlanType {
             SystemPermission.SALES_POS, // Premium additions
             SystemPermission.USERS_CREATE,
             SystemPermission.USERS_UPDATE,
+            SystemPermission.USERS_DELETE,
             SystemPermission.CUSTOMERS_Manage,
             SystemPermission.FINANCE_PAYABLES_READ,
             SystemPermission.FINANCE_RECEIVABLES_READ)),

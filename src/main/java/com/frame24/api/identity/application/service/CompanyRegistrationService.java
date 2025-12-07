@@ -223,7 +223,7 @@ public class CompanyRegistrationService {
         identity.setPasswordChangedAt(Instant.now());
         identity.setIdentityType(IdentityType.EMPLOYEE);
         identity.setActive(true);
-        identity.setEmailVerified(false);
+        identity.setEmailVerified(true); // Auto-verified (sem serviço de email configurado)
         identity.setFailedLoginAttempts(0);
         identity.setLoginCount(0);
         identity.setRequires2fa(false);

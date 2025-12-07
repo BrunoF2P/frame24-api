@@ -11,6 +11,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,6 +36,7 @@ public class RoleController {
 
     @PostMapping(version = "v1.0+")
     @Operation(summary = "Criar role customizada", description = "Cria uma nova role customizada para a empresa")
+    @CacheEvict(value = "roles", key = "#principal.companyId")
     public ResponseEntity<ApiResponse<RoleResponse>> createRole(
             @Valid @RequestBody CreateRoleRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -45,6 +48,7 @@ public class RoleController {
 
     @GetMapping(version = "v1.0+")
     @Operation(summary = "Listar todas as roles", description = "Lista todas as roles (sistema e customizadas) da empresa")
+    @Cacheable(value = "roles", key = "#principal.companyId")
     public ResponseEntity<ApiResponse<List<RoleResponse>>> listRoles(
             @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -54,7 +58,10 @@ public class RoleController {
 
     @GetMapping(value = "/{id}", version = "v1.0+")
     @Operation(summary = "Buscar role por ID", description = "Retorna os detalhes de uma role específica")
-    public ResponseEntity<ApiResponse<RoleResponse>> getRoleById(
+    @Cacheable(value = "role", key = "#id")
+    public ResponseEntity<ApiResponse<RoleResponse>>
+
+    getRoleById(
             @Parameter(description = "ID da role", example = "1234567890123456789") @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
 
@@ -64,6 +71,7 @@ public class RoleController {
 
     @PutMapping(value = "/{id}", version = "v1.0+")
     @Operation(summary = "Atualizar role", description = "Atualiza uma role customizada (não pode atualizar roles do sistema)")
+    @CacheEvict(value = {"roles", "role"}, key = "#id", allEntries = true)
     public ResponseEntity<ApiResponse<RoleResponse>> updateRole(
             @Parameter(description = "ID da role", example = "1234567890123456789") @PathVariable Long id,
             @Valid @RequestBody UpdateRoleRequest request,
@@ -75,6 +83,7 @@ public class RoleController {
 
     @DeleteMapping(value = "/{id}", version = "v1.0+")
     @Operation(summary = "Deletar role", description = "Deleta uma role customizada (não pode deletar roles do sistema ou em uso)")
+    @CacheEvict(value = {"roles", "role"}, key = "#id", allEntries = true)
     public ResponseEntity<ApiResponse<Void>> deleteRole(
             @Parameter(description = "ID da role", example = "1234567890123456789") @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
