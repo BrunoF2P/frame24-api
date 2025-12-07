@@ -1,5 +1,6 @@
 package com.frame24.api.identity.application.service;
 
+import com.frame24.api.common.event.CompanyCreatedEvent;
 import com.frame24.api.common.exception.ConflictException;
 import com.frame24.api.common.exception.ValidationException;
 import com.frame24.api.identity.application.dto.CompanyRegistrationRequest;
@@ -11,6 +12,7 @@ import com.frame24.api.identity.infrastructure.client.BrasilApiClient;
 import com.frame24.api.identity.infrastructure.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,7 @@ public class CompanyRegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final DefaultRolesService defaultRolesService;
     private final DefaultPermissionsService defaultPermissionsService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public CompanyRegistrationService(
             BrasilApiClient brasilApiClient,
@@ -49,7 +52,8 @@ public class CompanyRegistrationService {
             CompanyUserRepository companyUserRepository,
             PasswordEncoder passwordEncoder,
             DefaultRolesService defaultRolesService,
-            DefaultPermissionsService defaultPermissionsService) {
+            DefaultPermissionsService defaultPermissionsService,
+            ApplicationEventPublisher eventPublisher) {
         this.brasilApiClient = brasilApiClient;
         this.companyRepository = companyRepository;
         this.personRepository = personRepository;
@@ -59,6 +63,7 @@ public class CompanyRegistrationService {
         this.passwordEncoder = passwordEncoder;
         this.defaultRolesService = defaultRolesService;
         this.defaultPermissionsService = defaultPermissionsService;
+        this.eventPublisher = eventPublisher;
     }
 
     /**
@@ -88,7 +93,13 @@ public class CompanyRegistrationService {
         defaultPermissionsService.syncPermissions(company, company.getPlanType());
         defaultRolesService.createDefaultRoles(company);
 
-        // 6. Buscar role Administrador
+        // 6. Publicar evento de criação da empresa
+        eventPublisher.publishEvent(new CompanyCreatedEvent(
+                company.getId(),
+                company.getCorporateName(),
+                company.getTenantSlug()));
+
+        // 7. Buscar role Administrador
         CustomRole adminRole = customRoleRepository
                 .findByCompanyIdAndName(company.getId(), "Administrador")
                 .orElseThrow(() -> new IllegalStateException("Role Administrador não encontrada"));
