@@ -38,6 +38,7 @@ public class CompanyRegistrationService {
     private final CompanyUserRepository companyUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final DefaultRolesService defaultRolesService;
+    private final DefaultPermissionsService defaultPermissionsService;
 
     public CompanyRegistrationService(
             BrasilApiClient brasilApiClient,
@@ -47,7 +48,8 @@ public class CompanyRegistrationService {
             CustomRoleRepository customRoleRepository,
             CompanyUserRepository companyUserRepository,
             PasswordEncoder passwordEncoder,
-            DefaultRolesService defaultRolesService) {
+            DefaultRolesService defaultRolesService,
+            DefaultPermissionsService defaultPermissionsService) {
         this.brasilApiClient = brasilApiClient;
         this.companyRepository = companyRepository;
         this.personRepository = personRepository;
@@ -56,6 +58,7 @@ public class CompanyRegistrationService {
         this.companyUserRepository = companyUserRepository;
         this.passwordEncoder = passwordEncoder;
         this.defaultRolesService = defaultRolesService;
+        this.defaultPermissionsService = defaultPermissionsService;
     }
 
     /**
@@ -81,7 +84,8 @@ public class CompanyRegistrationService {
         // 4. Criar Company
         Company company = createCompany(request, tenantSlug, taxRegime, cnpjData);
 
-        // 5. Criar roles padrão do sistema
+        // 5. Sincronizar permissões do plano e Criar roles padrão
+        defaultPermissionsService.syncPermissions(company, company.getPlanType());
         defaultRolesService.createDefaultRoles(company);
 
         // 6. Buscar role Administrador

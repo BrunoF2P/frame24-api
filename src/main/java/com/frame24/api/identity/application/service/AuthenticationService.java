@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 import java.util.UUID;
 
 /**
@@ -72,16 +71,7 @@ public class AuthenticationService {
                 .findFirst()
                 .orElseThrow(() -> new ValidationException("email", "Usuário sem empresa associada"));
 
-        UserPrincipal userPrincipal = UserPrincipal.builder()
-                .userId(identity.getId())
-                .email(identity.getEmail())
-                .companyId(companyUser.getCompany().getId())
-                .userType(identity.getIdentityType().name())
-                .roleId(companyUser.getRole().getId())
-                .roleName(companyUser.getRole().getName())
-                .authorities(List.of(
-                        new SimpleGrantedAuthority("ROLE_" + companyUser.getRole().getName())))
-                .build();
+        UserPrincipal userPrincipal = createUserPrincipal(identity, companyUser);
 
         String accessToken = jwtService.generateAccessToken(userPrincipal);
         String refreshToken = jwtService.generateRefreshToken(userPrincipal);
@@ -151,16 +141,7 @@ public class AuthenticationService {
                 .findFirst()
                 .orElseThrow(() -> new ValidationException("token", "Usuário sem empresa associada"));
 
-        UserPrincipal userPrincipal = UserPrincipal.builder()
-                .userId(identity.getId())
-                .email(identity.getEmail())
-                .companyId(companyUser.getCompany().getId())
-                .userType(identity.getIdentityType().name())
-                .roleId(companyUser.getRole().getId())
-                .roleName(companyUser.getRole().getName())
-                .authorities(List.of(
-                        new SimpleGrantedAuthority("ROLE_" + companyUser.getRole().getName())))
-                .build();
+        UserPrincipal userPrincipal = createUserPrincipal(identity, companyUser);
 
         String newAccessToken = jwtService.generateAccessToken(userPrincipal);
         String newRefreshToken = jwtService.generateRefreshToken(userPrincipal);
@@ -238,5 +219,35 @@ public class AuthenticationService {
         identityRepository.save(identity);
 
         log.info("Senha redefinida com sucesso: userId={}", identity.getId());
+    }
+
+    /**
+     * Helper para criar UserPrincipal com todas as permissões (Role macro +
+     * Permissões granulares).
+     */
+    private UserPrincipal createUserPrincipal(Identity identity, CompanyUser companyUser) {
+        java.util.Set<org.springframework.security.core.GrantedAuthority> authorities = new java.util.HashSet<>();
+
+        // 1. Adiciona a Role principal (ex: ROLE_ADMINISTRADOR)
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + companyUser.getRole().getName()));
+
+        // 2. Adiciona permissões granulares (ex: users:read, sales:create)
+        if (companyUser.getRole().getRolePermissions() != null) {
+            companyUser.getRole().getRolePermissions().stream()
+                    .filter(rp -> rp.getPermission() != null
+                            && Boolean.TRUE.equals(rp.getPermission().getActive()))
+                    .forEach(rp -> authorities
+                            .add(new SimpleGrantedAuthority(rp.getPermission().getCode())));
+        }
+
+        return UserPrincipal.builder()
+                .userId(identity.getId())
+                .email(identity.getEmail())
+                .companyId(companyUser.getCompany().getId())
+                .userType(identity.getIdentityType().name())
+                .roleId(companyUser.getRole().getId())
+                .roleName(companyUser.getRole().getName())
+                .authorities(new java.util.ArrayList<>(authorities))
+                .build();
     }
 }

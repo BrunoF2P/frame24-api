@@ -29,89 +29,94 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CompanyRegistrationServiceTest {
 
-    @Mock
-    private BrasilApiClient brasilApiClient;
-    @Mock
-    private CompanyRepository companyRepository;
-    @Mock
-    private PersonRepository personRepository;
-    @Mock
-    private IdentityRepository identityRepository;
-    @Mock
-    private CustomRoleRepository customRoleRepository;
-    @Mock
-    private CompanyUserRepository companyUserRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-    @Mock
-    private DefaultRolesService defaultRolesService;
+        @Mock
+        private BrasilApiClient brasilApiClient;
+        @Mock
+        private CompanyRepository companyRepository;
+        @Mock
+        private PersonRepository personRepository;
+        @Mock
+        private IdentityRepository identityRepository;
+        @Mock
+        private CustomRoleRepository customRoleRepository;
+        @Mock
+        private CompanyUserRepository companyUserRepository;
+        @Mock
+        private PasswordEncoder passwordEncoder;
+        @Mock
+        private DefaultRolesService defaultRolesService;
 
-    private CompanyRegistrationService service;
+        @Mock
+        private DefaultPermissionsService defaultPermissionsService;
 
-    @BeforeEach
-    void setUp() {
-        service = new CompanyRegistrationService(
-                brasilApiClient,
-                companyRepository,
-                personRepository,
-                identityRepository,
-                customRoleRepository,
-                companyUserRepository,
-                passwordEncoder,
-                defaultRolesService);
-    }
+        private CompanyRegistrationService companyRegistrationService;
 
-    @Test
-    @DisplayName("Should register company with auto-filled address from BrasilAPI")
-    void shouldRegisterCompanyWithAutoFilledAddress() {
-        // Arrange
-        String cnpj = "59945840000170";
-        CompanyRegistrationRequest request = new CompanyRegistrationRequest(
-                "Cinema Estrela LTDA",
-                "CineEstrela",
-                cnpj,
-                null, "", null, null, null, null, null, // Empty address fields
-                "(11) 3333-4444",
-                "company@test.com",
-                "Admin Name",
-                "admin@test.com",
-                "Password123",
-                "(11) 99999-9999",
-                CompanyPlanType.BASIC);
+        @BeforeEach
+        void setUp() {
+                companyRegistrationService = new CompanyRegistrationService(
+                                brasilApiClient,
+                                companyRepository,
+                                personRepository,
+                                identityRepository,
+                                customRoleRepository,
+                                companyUserRepository,
+                                passwordEncoder,
+                                defaultRolesService,
+                                defaultPermissionsService);
+        }
 
-        BrasilApiClient.CnpjResponse cnpjResponse = new BrasilApiClient.CnpjResponse(
-                cnpj, "Cinema Estrela LTDA", "CineEstrela", false, "PORTE", "NATUREZA", "ATIVA", "ATIVA",
-                "AVENIDA PAULISTA", "1000", "SALA 1", "BELA VISTA", "01310-100", "SAO PAULO", "SP");
+        @Test
+        @DisplayName("Should register company with auto-filled address from BrasilAPI")
+        void shouldRegisterCompanyWithAutoFilledAddress() {
+                // Arrange
+                String cnpj = "59945840000170";
+                CompanyRegistrationRequest request = new CompanyRegistrationRequest(
+                                "Cinema Estrela LTDA",
+                                "CineEstrela",
+                                cnpj,
+                                null, "", null, null, null, null, null, // Empty address fields
+                                "(11) 3333-4444",
+                                "company@test.com",
+                                "Admin Name",
+                                "admin@test.com",
+                                "Password123",
+                                "(11) 99999-9999",
+                                CompanyPlanType.BASIC);
 
-        when(brasilApiClient.getCnpjData(anyString())).thenReturn(cnpjResponse);
-        when(companyRepository.existsByCnpj(any())).thenReturn(false);
-        when(identityRepository.existsByEmail(any())).thenReturn(false);
-        when(companyRepository.existsByTenantSlug(anyString())).thenReturn(false);
+                BrasilApiClient.CnpjResponse cnpjResponse = new BrasilApiClient.CnpjResponse(
+                                cnpj, "Cinema Estrela LTDA", "CineEstrela", false, "PORTE", "NATUREZA", "ATIVA",
+                                "ATIVA",
+                                "AVENIDA PAULISTA", "1000", "SALA 1", "BELA VISTA", "01310-100", "SAO PAULO", "SP");
 
-        Company mockCompany = new Company();
-        mockCompany.setId(1L);
-        mockCompany.setCorporateName("Cinema Estrela LTDA");
-        mockCompany.setTenantSlug("cineestrela");
-        when(companyRepository.save(any(Company.class))).thenReturn(mockCompany);
+                when(brasilApiClient.getCnpjData(anyString())).thenReturn(cnpjResponse);
+                when(companyRepository.existsByCnpj(any())).thenReturn(false);
+                when(identityRepository.existsByEmail(any())).thenReturn(false);
+                when(companyRepository.existsByTenantSlug(anyString())).thenReturn(false);
 
-        when(customRoleRepository.findByCompanyIdAndName(any(), anyString()))
-                .thenReturn(Optional.of(new CustomRole()));
+                Company mockCompany = new Company();
+                mockCompany.setId(1L);
+                mockCompany.setCorporateName("Cinema Estrela LTDA");
+                mockCompany.setTenantSlug("cineestrela");
+                when(companyRepository.save(any(Company.class))).thenReturn(mockCompany);
 
-        when(personRepository.save(any(Person.class))).thenReturn(new Person());
-        when(identityRepository.save(any(Identity.class))).thenReturn(new Identity());
+                when(customRoleRepository.findByCompanyIdAndName(any(), anyString()))
+                                .thenReturn(Optional.of(new CustomRole()));
 
-        // Act
-        service.register(request);
+                when(personRepository.save(any(Person.class))).thenReturn(new Person());
+                when(identityRepository.save(any(Identity.class))).thenReturn(new Identity());
 
-        // Assert
-        ArgumentCaptor<Company> companyCaptor = ArgumentCaptor.forClass(Company.class);
-        verify(companyRepository).save(companyCaptor.capture());
-        Company savedCompany = companyCaptor.getValue();
+                // Act
+                companyRegistrationService.register(request);
 
-        assertEquals("AVENIDA PAULISTA", savedCompany.getStreetAddress());
-        assertEquals("1000", savedCompany.getAddressNumber());
-        assertEquals("SAO PAULO", savedCompany.getCity());
-        assertEquals("SP", savedCompany.getState());
-        assertEquals(TaxRegimeType.LUCRO_PRESUMIDO, savedCompany.getTaxRegime());
-    }
+                // Assert
+                ArgumentCaptor<Company> companyCaptor = ArgumentCaptor.forClass(Company.class);
+                verify(companyRepository).save(companyCaptor.capture());
+                Company savedCompany = companyCaptor.getValue();
+
+                assertEquals("AVENIDA PAULISTA", savedCompany.getStreetAddress());
+                assertEquals("1000", savedCompany.getAddressNumber());
+                assertEquals("SAO PAULO", savedCompany.getCity());
+                assertEquals("SP", savedCompany.getState());
+                assertEquals(TaxRegimeType.LUCRO_PRESUMIDO, savedCompany.getTaxRegime());
+        }
 }
